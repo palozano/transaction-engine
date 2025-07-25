@@ -191,6 +191,7 @@ impl Account {
     }
 }
 
+/// A collection of accounts, using a [`HashMap`] underneath.
 #[derive(Debug, Serialize)]
 pub(crate) struct Accounts(HashMap<Client, Account>);
 

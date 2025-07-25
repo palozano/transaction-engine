@@ -2,7 +2,7 @@
 //! transaction onto a collection of accounts.
 
 use crate::{
-    accounts::{Account, Accounts},
+    accounts::Account,
     error::{Error, TransactionError},
     primitives::Tx,
     transactions::{Transaction, TxType},
@@ -28,29 +28,12 @@ impl Engine {
             .ok_or(TransactionError::MissingDispute(tx).into())
     }
 
-    /// Process the collection of transactions, given a reader for the transactions and a
-    /// collection of accounts.
-    pub(crate) fn process_transactions<R: std::io::Read>(
-        &mut self,
-        reader: &mut csv::Reader<R>,
-        accounts: &mut Accounts,
-    ) -> Result<(), Error> {
-        for record in reader.deserialize() {
-            let transaction: Transaction = record?;
-            let account = accounts.get_mut(transaction.client);
-            match self.process(account, transaction) {
-                Ok(_) => {}
-                Err(e) => {
-                    tracing::error!("{}", e);
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     /// Process the [`Transaction`] onto the corresponding [`Account`] b
-    fn process(&mut self, account: &mut Account, transaction: Transaction) -> Result<(), Error> {
+    pub(crate) fn process(
+        &mut self,
+        account: &mut Account,
+        transaction: Transaction,
+    ) -> Result<(), Error> {
         transaction.is_valid()?;
 
         // TODO: check all possible transactions? or only a subset?

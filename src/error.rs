@@ -10,6 +10,10 @@ use crate::primitives::{Client, Tx};
 //
 // pub(crate) type Result<T = ()> = core::result::Result<T, Box<dyn std::error::Error>>;
 
+/// The general error used to report failures in the code.
+///
+/// Takes into account all the possible errors that can arise (IO, CSV parsing, transaction
+/// application and account management).
 #[derive(Debug)]
 pub(crate) enum Error {
     /// Error while dealing with accounts.
@@ -47,11 +51,16 @@ impl From<csv::Error> for Error {
     }
 }
 
+/// Errors while dealing with [`Account`]s.
 #[derive(Debug)]
 pub(crate) enum AccountError {
+    /// There are not enough funds in the client's account.
     InsufficientFunds(Client),
+    /// The client's account is locked and cannot perfom operations.
     AccountLocked(Client),
+    /// The client's account overflowed.
     Overflow(Client),
+    /// The client's account underflowed.
     Underflow(Client),
 }
 
@@ -76,15 +85,24 @@ impl std::fmt::Display for AccountError {
     }
 }
 
+/// Errors while applying [`Transaction`]s.
 #[derive(Debug, PartialEq)]
 pub(crate) enum TransactionError {
+    /// The transaction is missing the amount field.
     MissingAmount(Tx),
+    /// The transaction should not have an amount field.
     AmountPresent(Tx),
+    /// The amount present is non positive.
     NonPositiveAmount(Tx),
+    /// The transaction is a duplicate of a previous one.
     DuplicateFound(Tx),
+    /// A dispute already exists for the transaction.
     ExistingDispute(Tx),
+    /// There is no dispute for the transaction.
     MissingDispute(Tx),
+    /// Only a deposit transaction can be disputed.
     OnlyDepositsCanBeDisputed(Tx),
+    /// The client in the dispute is not the same as the one in the original transaction.
     WrongClient(Tx, Client, Client),
 }
 
@@ -131,4 +149,22 @@ impl std::fmt::Display for TransactionError {
             ),
         }
     }
+}
+
+// NOTE: this produces some output in a log file for errors that arise while executing,
+// but since it was not specified if other files could be produced, it is commented out.
+#[allow(dead_code)]
+/// Set up tracing and the file to write to.
+fn errors_to_file() -> Result<(), crate::error::Error> {
+    // The file to log to
+    let log_file = std::sync::Mutex::new(std::fs::File::create("error.log")?);
+
+    // Set the subscriber for the tracing
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::ERROR)
+        .with_writer(log_file)
+        .compact()
+        .init();
+
+    Ok(())
 }
